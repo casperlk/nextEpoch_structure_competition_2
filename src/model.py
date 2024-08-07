@@ -44,27 +44,48 @@ class RNA_net(nn.Module):
         super(RNA_net, self).__init__()
 
         self.embedding = RNA_embedding(embedding_dim)
-        self.layer1 = torch.nn.Conv2d(embedding_dim, embedding_dim, 3, padding=1)
-        self.layer2 = torch.nn.Conv2d(embedding_dim, 1, 3, padding=1)
 
+        # self.layers = nn.Sequential(
+        #     torch.nn.Conv2d(embedding_dim, embedding_dim, 3, padding=1),
+        #     # torch.nn.Conv2d(embedding_dim, embedding_dim, 3, padding=1),
+        #     # torch.nn.Conv2d(embedding_dim, embedding_dim, 3, padding=1),
+        #     torch.nn.Conv2d(embedding_dim, 1, 3, padding=1)
+        # )
+
+
+        self.layers = nn.Sequential(
+            nn.Conv2d(embedding_dim, embedding_dim, 3, padding=1),
+            nn.BatchNorm2d(embedding_dim),   # Batch normalization after the first conv layer
+            nn.ReLU(),                      # Activation function
+
+            nn.Conv2d(embedding_dim, embedding_dim, 3, padding=1),
+            nn.BatchNorm2d(embedding_dim),   # Batch normalization after the second conv layer
+            nn.ReLU(),                      # Activation function
+
+            nn.Conv2d(embedding_dim, embedding_dim, 3, padding=1),
+            nn.BatchNorm2d(embedding_dim),   # Batch normalization after the third conv layer
+            nn.ReLU(),                      # Activation function
+
+            # Note: No batch normalization or activation after the final conv layer
+        )
+
+        self.final_layer = nn.Conv2d(embedding_dim, 1, 3, padding=1)
 
         # Your layers here
 
     def forward(self, sequences):
+        # x.shape (N, L)
 
-        # print(f"{sequences.shape=}")
-        # print(f"{sequences=}")
+        s, m = self.embedding(sequences)        # m.shape (N, d, L, L)
+        residual = m                            # [N, d, L, L]
 
-        s, m = self.embedding(sequences)
-        x = self.layer1(m)
-        x = self.layer2(m)
-        x = x.squeeze(1)
-        # print(f"{m.shape=}")
-        # print(f"{m=}")
-        # print(f"{x.shape=}")
-        # print(f"{x=}")
+        m = self.layers(m)                      # [N, d, L, L]
+        # print(f"{m.shape}")
+        m = m + residual
+        m = self.final_layer(m)
 
+        # m = self.layer1(m)                      # m.shape (N, d, L, L)
+        # m = self.layer2(m)                      # m.shape (N, 1, L, L)
+        m = m.squeeze(1)                        # m.shape (N, L, L)
 
-        # Your forward pass here
-
-        return x
+        return m
