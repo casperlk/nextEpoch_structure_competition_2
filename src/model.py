@@ -44,13 +44,27 @@ class RNA_net(nn.Module):
         super(RNA_net, self).__init__()
 
         self.embedding = RNA_embedding(embedding_dim)
+        self.layer1 = torch.nn.Conv2d(embedding_dim, embedding_dim, 3, padding=1)
+        self.layer2 = torch.nn.Conv2d(embedding_dim, 1, 3, padding=1)
+
 
         # Your layers here
 
-    def forward(self, x):
+    def forward(self, sequences):
 
-        s, m = self.embedding(x)
+        # print(f"{sequences.shape=}")
+        # print(f"{sequences=}")
+
+        s, m = self.embedding(sequences)
+        x = self.layer1(m)
+        x = self.layer2(m)
+        x = x.squeeze(1)
+        # print(f"{m.shape=}")
+        # print(f"{m=}")
+        # print(f"{x.shape=}")
+        # print(f"{x=}")
+
 
         # Your forward pass here
 
-        return m
+        return x
